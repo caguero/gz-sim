@@ -392,6 +392,12 @@ void EntityComponentManager::ForEach(Function _f,
 template <typename... ComponentTypeTs, typename Func>
 void EntityComponentManager::EachNew(Func &&_f)
 {
+  // Entities are new for one update only, so most calls have nothing to
+  // visit. Skip building the view (one storage lookup per component type)
+  // when the NewEntity storage is empty.
+  if (this->Registry().template storage<NewEntity>().empty())
+    return;
+
   auto view = this->Registry().template view<NewEntity, ComponentTypeTs...>();
 
   // Iterate over the entities in the view, and invoke the callback
@@ -408,6 +414,11 @@ void EntityComponentManager::EachNew(Func &&_f)
 template <typename... ComponentTypeTs, typename Func>
 void EntityComponentManager::EachNew(Func &&_f) const
 {
+  // See the non const overload: nothing to visit when no entity is new.
+  const auto *newStorage = this->Registry().template storage<NewEntity>();
+  if (nullptr == newStorage || newStorage->empty())
+    return;
+
   auto view = this->Registry().template view<
     const NewEntity, const ComponentTypeTs...>();
 
@@ -425,6 +436,11 @@ void EntityComponentManager::EachNew(Func &&_f) const
 template<typename ...ComponentTypeTs, typename Func>
 void EntityComponentManager::EachRemoved(Func &&_f) const
 {
+  // Nothing to visit when no entity is marked for removal.
+  const auto *removeStorage = this->Registry().template storage<RemoveEntity>();
+  if (nullptr == removeStorage || removeStorage->empty())
+    return;
+
   auto view = this->Registry().template view<
     const RemoveEntity, const ComponentTypeTs...>();
 
